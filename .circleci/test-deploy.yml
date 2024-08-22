@@ -1,0 +1,61 @@
+version: 2.1
+orbs:
+  # Your orb will be automatically injected here during the pipeline.
+  # Reference your orb's jobs and commands below as they will exist when built.
+  orb-tools: circleci/orb-tools@12.0
+  # The orb definition is intentionally not included here. It will be injected into the pipeline.
+  test-visibility-circleci-orb: {}
+
+# Use this tag to ensure test jobs always run,
+# even though the downstream publish job will only run on release tags.
+filters: &filters
+  tags:
+    only: /.*/
+
+# Filter for release tags.
+release-filters: &release-filters
+  branches:
+    ignore: /.*/
+  tags:
+    only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
+
+jobs:
+  # Test that the autoinstrumentation command orb works as expected.
+  command-test:
+    docker:
+      - image: adoptopenjdk/openjdk11:latest
+    steps:
+      - checkout
+      # You can pass environment variables at runtime like so
+      - run: echo 'export DD_API_KEY=dummy' >> $BASH_ENV
+      - test-visibility-circleci-orb/autoinstrument:
+          languages: java
+      - run:
+          name: Test that java has been instrumented with test visibility
+          command: |
+            java -version 2>&1 | tee $LOG_FILE
+            grep -q "$TRACER_INIT_LOG" $LOG_FILE || { echo "Error: Output does not contain tracer initialisation log: $TRACER_INIT_LOG"; exit 1; }
+          environment:
+            DD_SERVICE: my-service
+            LOG_FILE: java-output.log
+            TRACER_INIT_LOG: CI Visibility settings
+workflows:
+  test-deploy:
+    jobs:
+      # Make sure to include "filters: *filters" in every test job you want to run as part of your deployment.
+      # Test your orb's commands in a custom job and test your orb's jobs directly as a part of this workflow.
+      - command-test:
+          filters: *filters
+      # The orb must be re-packed for publishing, and saved to the workspace.
+      - orb-tools/pack:
+          filters: *release-filters
+      - orb-tools/publish:
+          orb_name: datadog/test-visibility-circleci-orb
+          vcs_type: << pipeline.project.type >>
+          pub_type: production
+          # Ensure this job requires all test jobs and the pack job.
+          requires:
+            - orb-tools/pack
+            - command-test
+          context: orb-publishing
+          filters: *release-filters

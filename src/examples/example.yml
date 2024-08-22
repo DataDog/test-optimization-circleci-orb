@@ -1,0 +1,19 @@
+description: >
+  Example usage of the Test Visibility CircleCI Orb. This example instruments Python and JavaScript tests and runs them.
+usage:
+  version: 2.1
+  orbs:
+    test-visibility-circleci-orb: datadog/test-visibility-circleci-orb@1
+  jobs:
+    test:
+      docker:
+        - image: ubuntu:latest
+      steps:
+        - checkout
+        - run: apt install -y python3 python3-pip nodejs npm
+        - run: pip install pytest
+        - test-visibility-circleci-orb/autoinstrument:
+            languages: python js
+            site: datadoghq.com
+        - run: pytest
+        - run: npm install && npm run test
