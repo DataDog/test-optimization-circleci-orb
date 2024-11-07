@@ -30,6 +30,7 @@ jobs:
       - run: echo 'export DD_API_KEY=dummy' >> $BASH_ENV
       - test-visibility-circleci-orb/autoinstrument:
           languages: java
+          java_instrumented_build_system: all
       - run:
           name: Test that java has been instrumented with test visibility
           command: |
