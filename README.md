@@ -85,9 +85,8 @@ jobs:
       - image: node:latest
     steps:
       - checkout
-      - run: pip install pytest
       - test-visibility-circleci-orb/autoinstrument:
-          languages: python
+          languages: js
           site: datadoghq.com
       - run: echo "export NODE_OPTIONS=\"$NODE_OPTIONS --import $DD_TRACE_ESM_IMPORT\"" >> $BASH_ENV
       - run: npm run test
