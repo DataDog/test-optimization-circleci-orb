@@ -28,6 +28,10 @@ parameters:
     description: 'The version of Datadog Python tracer to use (optional). Defaults to the latest release.'
     type: string
     default: ''
+  ruby_tracer_version:
+    description: 'The version of datadog-ci gem to use (optional). Defaults to the latest release.'
+    type: string
+    default: ''
   java_instrumented_build_system:
     description: 'If provided, only the specified build systems will be instrumented (allowed values are `gradle` and `maven`). Otherwise every Java process will be instrumented.'
     type: string
@@ -42,8 +46,9 @@ steps:
         DD_SET_TRACER_VERSION_JAVA: <<parameters.java_tracer_version>>
         DD_SET_TRACER_VERSION_JS: <<parameters.js_tracer_version>>
         DD_SET_TRACER_VERSION_PYTHON: <<parameters.python_tracer_version>>
+        DD_SET_TRACER_VERSION_RUBY: <<parameters.ruby_tracer_version>>
         DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA: <<parameters.java_instrumented_build_system>>
-        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v4.sh
-        INSTALLATION_SCRIPT_CHECKSUM: 41c0df6833bd371cbebf38767cf358c94a3fd1547056281e3ae9cade53fb39e2
+        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v5.sh
+        INSTALLATION_SCRIPT_CHECKSUM: 903f1146fe123a1f7c6accdc48411546eead172f2d577fb41876d29b537eb7d6
       name: Configure Datadog Test Visibility
       command: <<include(scripts/autoinstrument.sh)>>
