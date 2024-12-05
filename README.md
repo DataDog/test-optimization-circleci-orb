@@ -1,7 +1,7 @@
 # <img height="25" src="logos/test_visibility_logo.png" /> Datadog Test Optimization CircleCI Orb
 
 [CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-visibility-circleci-orb) that installs and configures [Datadog Test Optimization](https://docs.datadoghq.com/tests/).
-Supported languages are .NET, Java, Javascript, and Python.
+Supported languages are .NET, Java, Javascript, Python, and Ruby.
 
 ## About Datadog Test Optimization
 
