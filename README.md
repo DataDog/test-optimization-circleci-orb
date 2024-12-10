@@ -1,11 +1,11 @@
 # <img height="25" src="logos/test_visibility_logo.png" /> Datadog Test Optimization CircleCI Orb
 
-[CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-visibility-circleci-orb) that installs and configures [Datadog Test Optimization](https://docs.datadoghq.com/tests/).
+[CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-optimization-circleci-orb) that installs and configures [Datadog Test Optimization](https://docs.datadoghq.com/tests/).
 Supported languages are .NET, Java, Javascript, Python, and Ruby.
 
 ## About Datadog Test Optimization
 
-[Test Visibility](https://docs.datadoghq.com/tests/) provides a test-first view into your CI health by displaying important metrics and results from your tests.
+[Test Optimization](https://docs.datadoghq.com/tests/) provides a test-first view into your CI health by displaying important metrics and results from your tests.
 It can help you investigate and mitigate performance problems and test failures that are most relevant to your work, focusing on the code you are responsible for, rather than the pipelines which run your tests.
 
 ## Usage
@@ -18,7 +18,7 @@ It can help you investigate and mitigate performance problems and test failures 
 version: 2.1
 
 orbs:
-  test-visibility-circleci-orb: datadog/test-visibility-circleci-orb@1
+  test-optimization-circleci-orb: datadog/test-optimization-circleci-orb@1
 
 jobs:
   test:
@@ -27,7 +27,7 @@ jobs:
     steps:
       - checkout
       - run: pip install pytest
-      - test-visibility-circleci-orb/autoinstrument:
+      - test-optimization-circleci-orb/autoinstrument:
           languages: python
           site: datadoghq.com
       - run: pytest
@@ -65,7 +65,7 @@ jobs:
           echo "export DD_SERVICE=my-service" >> $BASH_ENV
           echo "export DD_ENV=staging-tests" >> $BASH_ENV
           echo "export DD_TAGS=layer:api,team:intake,key:value" >> $BASH_ENV
-      - test-visibility-circleci-orb/autoinstrument:
+      - test-optimization-circleci-orb/autoinstrument:
           languages: python
           site: datadoghq.com
       - run: pytest
@@ -86,7 +86,7 @@ jobs:
       - image: node:latest
     steps:
       - checkout
-      - test-visibility-circleci-orb/autoinstrument:
+      - test-optimization-circleci-orb/autoinstrument:
           languages: js
           site: datadoghq.com
       - run: echo "export NODE_OPTIONS=\"$NODE_OPTIONS --import $DD_TRACE_ESM_IMPORT\"" >> $BASH_ENV
