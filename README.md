@@ -1,9 +1,9 @@
-# <img height="25" src="logos/test_visibility_logo.png" />  Datadog Test Visibility CircleCI Orb
+# <img height="25" src="logos/test_visibility_logo.png" /> Datadog Test Optimization CircleCI Orb
 
-[CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-visibility-circleci-orb) that installs and configures [Datadog Test Visibility](https://docs.datadoghq.com/tests/).
-Supported languages are .NET, Java, Javascript, and Python.
+[CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-visibility-circleci-orb) that installs and configures [Datadog Test Optimization](https://docs.datadoghq.com/tests/).
+Supported languages are .NET, Java, Javascript, Python, and Ruby.
 
-## About Datadog Test Visibility
+## About Datadog Test Optimization
 
 [Test Visibility](https://docs.datadoghq.com/tests/) provides a test-first view into your CI health by displaying important metrics and results from your tests.
 It can help you investigate and mitigate performance problems and test failures that are most relevant to your work, focusing on the code you are responsible for, rather than the pipelines which run your tests.
@@ -14,7 +14,7 @@ It can help you investigate and mitigate performance problems and test failures 
 
 2. Execute this command orb as part of your CircleCI job YAML before running the tests. Set the languages and [site](https://docs.datadoghq.com/getting_started/site/) parameters:
 
- ```yaml
+```yaml
 version: 2.1
 
 orbs:
@@ -31,22 +31,23 @@ jobs:
           languages: python
           site: datadoghq.com
       - run: pytest
- ```
+```
 
 ## Configuration
 
 The orb has the following parameters:
 
-| Name | Description | Required | Default |
-| ---- | ----------- | -------- | ------- |
- | languages | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet" (multiple languages can be specified as a space-separated list). | true | |
- | site | Datadog site. See https://docs.datadoghq.com/getting_started/site for more information about sites. | false | datadoghq.com |
- | service | The name of the service or library being tested. | false | |
- | dotnet_tracer_version | The version of Datadog .NET tracer to use. Defaults to the latest release. | false | |
- | java_tracer_version | The version of Datadog Java tracer to use. Defaults to the latest release. | false | |
- | js_tracer_version | The version of Datadog JS tracer to use. Defaults to the latest release. | false | |
- | python_tracer_version | The version of Datadog Python tracer to use. Defaults to the latest release. | false | |
- | java_instrumented_build_system | If provided, only the specified build systems will be instrumented (allowed values are `gradle`,`maven`,`sbt`,`ant`,`all`). `all` is a special value that instruments every Java process. If this property is not provided, all known build systems will be instrumented (Gradle, Maven, SBT, Ant). | false | |
+| Name                           | Description                                                                                                                                                                                                                                                                                         | Required | Default       |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
+| languages                      | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby" (multiple languages can be specified as a space-separated list).                                                                                                                       | true     |               |
+| site                           | Datadog site. See https://docs.datadoghq.com/getting_started/site for more information about sites.                                                                                                                                                                                                 | false    | datadoghq.com |
+| service                        | The name of the service or library being tested.                                                                                                                                                                                                                                                    | false    |               |
+| dotnet_tracer_version          | The version of Datadog .NET tracer to use. Defaults to the latest release.                                                                                                                                                                                                                          | false    |               |
+| java_tracer_version            | The version of Datadog Java tracer to use. Defaults to the latest release.                                                                                                                                                                                                                          | false    |               |
+| js_tracer_version              | The version of Datadog JS tracer to use. Defaults to the latest release.                                                                                                                                                                                                                            | false    |               |
+| python_tracer_version          | The version of Datadog Python tracer to use. Defaults to the latest release.                                                                                                                                                                                                                        | false    |               |
+| ruby_tracer_version            | The version of datadog-ci gem to use. Defaults to the latest release.                                                                                                                                                                                                                               | false    |               |
+| java_instrumented_build_system | If provided, only the specified build systems will be instrumented (allowed values are `gradle`,`maven`,`sbt`,`ant`,`all`). `all` is a special value that instruments every Java process. If this property is not provided, all known build systems will be instrumented (Gradle, Maven, SBT, Ant). | false    |               |
 
 ### Additional configuration
 
@@ -96,4 +97,4 @@ jobs:
 
 ### Tracing cypress tests
 
-To instrument your [Cypress](https://www.cypress.io/) tests with Datadog Test Visibility, please follow the manual steps in the [docs](https://docs.datadoghq.com/tests/setup/javascript/?tab=cypress).
+To instrument your [Cypress](https://www.cypress.io/) tests with Datadog Test Optimization, please follow the manual steps in the [docs](https://docs.datadoghq.com/tests/setup/javascript/?tab=cypress).
