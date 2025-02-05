@@ -69,4 +69,7 @@ fi
 if [ -n "$DD_TRACER_VERSION_PYTHON" ]; then
   echo "- __Python:__ $DD_TRACER_VERSION_PYTHON"
 fi
+if [ -n "$DD_TRACER_VERSION_GO" ]; then
+  echo "- __Go:__ $DD_TRACER_VERSION_GO"
+fi
 echo "---"
