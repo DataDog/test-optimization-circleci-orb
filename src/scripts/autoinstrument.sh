@@ -72,4 +72,7 @@ fi
 if [ -n "$DD_TRACER_VERSION_GO" ]; then
   echo "- __Go:__ $DD_TRACER_VERSION_GO"
 fi
+if [ -n "$DD_TRACER_VERSION_RUBY" ]; then
+  echo "- __Ruby:__ $DD_TRACER_VERSION_RUBY"
+fi
 echo "---"
