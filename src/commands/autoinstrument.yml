@@ -53,7 +53,7 @@ steps:
         DD_SET_TRACER_VERSION_RUBY: <<parameters.ruby_tracer_version>>
         DD_SET_TRACER_VERSION_GO: <<parameters.go_tracer_version>>
         DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA: <<parameters.java_instrumented_build_system>>
-        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v10.sh
-        INSTALLATION_SCRIPT_CHECKSUM: 6fac0cc8224499a155e7253b936520ae763dce7bfec04900220f1a5a885821fc
+        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v11.sh
+        INSTALLATION_SCRIPT_CHECKSUM: fc64c45fd4b45b4b01773c58a3a116bef212dc4095508a6e27e19e50e901bd55
       name: Configure Datadog Test Visibility
       command: <<include(scripts/autoinstrument.sh)>>
