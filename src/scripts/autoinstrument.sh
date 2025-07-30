@@ -31,11 +31,11 @@ else
 fi
 
 if command -v sha256sum >/dev/null 2>&1; then
-  if ! echo "$INSTALLATION_SCRIPT_CHECKSUM $script_filepath" | sha256sum --quiet -c -; then
+  if ! echo "$INSTALLATION_SCRIPT_CHECKSUM  $script_filepath" | sha256sum -c -; then
     exit 1
   fi
 elif command -v shasum >/dev/null 2>&1; then
-  if ! echo "$INSTALLATION_SCRIPT_CHECKSUM  $script_filepath" | shasum --quiet -a 256 -c -; then
+  if ! echo "$INSTALLATION_SCRIPT_CHECKSUM  $script_filepath" | shasum -a 256 -c -; then
     exit 1
   fi
 else
