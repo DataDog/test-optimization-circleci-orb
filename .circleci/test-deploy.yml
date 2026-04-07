@@ -2,7 +2,7 @@ version: 2.1
 orbs:
   # Your orb will be automatically injected here during the pipeline.
   # Reference your orb's jobs and commands below as they will exist when built.
-  orb-tools: circleci/orb-tools@12.0
+  orb-tools: circleci/orb-tools@12.0.4
   # The orb definition is intentionally not included here. It will be injected into the pipeline.
   test-optimization-circleci-orb: {}
 
@@ -23,7 +23,7 @@ jobs:
   # Test that the autoinstrumentation command orb works as expected.
   command-test:
     docker:
-      - image: adoptopenjdk/openjdk11:latest
+      - image: adoptopenjdk/openjdk11:jdk-11.0.27_6
     steps:
       - checkout
       # You can pass environment variables at runtime like so
