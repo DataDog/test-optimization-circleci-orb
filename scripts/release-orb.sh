@@ -209,8 +209,22 @@ next_tag_for_bump_kind() {
   esac
 }
 
+if ! merged_pr_rows=$(
+  gh pr list \
+    --repo "$repo" \
+    --state merged \
+    --base "$base_branch" \
+    --limit "$pr_limit" \
+    --json number,mergedAt,mergeCommit,labels \
+    --jq 'sort_by(.mergedAt) | .[] | [.number, (.mergeCommit.oid // ""), ([.labels[].name] | join(","))] | @tsv'
+); then
+  echo "Failed to query merged PR labels for $repo." >&2
+  exit 1
+fi
+
 release_bump_kind=""
 release_pr_numbers=()
+unlabeled_release_pr_numbers=()
 
 while IFS=$'\t' read -r pr_number merge_sha labels_csv; do
   [[ -z "$pr_number" || -z "$merge_sha" ]] && continue
@@ -226,26 +240,14 @@ while IFS=$'\t' read -r pr_number merge_sha labels_csv; do
   fi
 
   pr_bump_kind=""
-  IFS=, read -ra labels <<< "$labels_csv"
-  for label in "${labels[@]}"; do
-    case "$label" in
-      "$major_label")
-        pr_bump_kind="major"
-        ;;
-      "$minor_label")
-        if [[ "$pr_bump_kind" != "major" ]]; then
-          pr_bump_kind="minor"
-        fi
-        ;;
-      "$patch_label")
-        if [[ -z "$pr_bump_kind" ]]; then
-          pr_bump_kind="patch"
-        fi
-        ;;
-    esac
-  done
+  case ",$labels_csv," in
+    *",$major_label,"*) pr_bump_kind="major" ;;
+    *",$minor_label,"*) pr_bump_kind="minor" ;;
+    *",$patch_label,"*) pr_bump_kind="patch" ;;
+  esac
 
   if [[ -z "$pr_bump_kind" ]]; then
+    unlabeled_release_pr_numbers+=("#$pr_number")
     continue
   fi
 
@@ -253,15 +255,14 @@ while IFS=$'\t' read -r pr_number merge_sha labels_csv; do
   if [[ -z "$release_bump_kind" || "$(bump_rank "$pr_bump_kind")" -gt "$(bump_rank "$release_bump_kind")" ]]; then
     release_bump_kind="$pr_bump_kind"
   fi
-done < <(
-  gh pr list \
-    --repo "$repo" \
-    --state merged \
-    --base "$base_branch" \
-    --limit "$pr_limit" \
-    --json number,mergedAt,mergeCommit,labels \
-    --jq 'sort_by(.mergedAt) | .[] | [.number, (.mergeCommit.oid // ""), ([.labels[].name] | join(","))] | @tsv'
-)
+done <<< "$merged_pr_rows"
+
+if [[ ${#unlabeled_release_pr_numbers[@]} -gt 0 ]]; then
+  echo "Merged PRs included in the release are missing a semver label:" >&2
+  printf '  - %s\n' "${unlabeled_release_pr_numbers[@]}" >&2
+  echo "Apply '$major_label', '$minor_label', or '$patch_label' before releasing." >&2
+  exit 1
+fi
 
 if [[ -z "$release_bump_kind" && -z "$requested_tag" ]]; then
   echo "No unreleased merged PRs with '$major_label', '$minor_label', or '$patch_label' found between $latest_tag and $target_sha."
