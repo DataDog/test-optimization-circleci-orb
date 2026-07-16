@@ -3,7 +3,7 @@ description: >
 usage:
   version: 2.1
   orbs:
-    test-optimization-circleci-orb: datadog/test-optimization-circleci-orb@1
+    test-optimization-circleci-orb: datadog/test-optimization-circleci-orb@2
   jobs:
     test:
       docker:
