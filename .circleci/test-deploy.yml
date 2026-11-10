@@ -39,7 +39,7 @@ commands:
             fi
       - run: echo 'export DD_API_KEY=dummy' >> "$BASH_ENV"
       - run:
-          name: Write the Go modules and record the image's go
+          name: Write the Go modules, record the image's go and put folders on PATH through BASH_ENV
           command: tests/go-check.sh prepare << parameters.layout >>
   go-check:
     parameters:

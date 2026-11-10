@@ -4,13 +4,16 @@
 #
 #   tests/go-check.sh prepare root|multiple_modules
 #       before the orb: writes Go modules that declare go 1.22 into
-#       /tmp/go-check/project and records the toolchain's go;
+#       /tmp/go-check/project, records the toolchain's go, and writes to
+#       $BASH_ENV a folder in front of PATH and one behind it, as earlier
+#       steps often do;
 #   tests/go-check.sh check instrumented|skipped [default|latest|<version>]
 #       in a later step, which gets the orb's $BASH_ENV: checks go on PATH,
-#       DD_TRACER_VERSION_GO, that a Bash script that the step starts keeps
-#       the step's PATH and go, that each module's test event reaches a local
-#       intake only when instrumented, that a failing test still fails, and
-#       that go test leaves the projects' files unchanged.
+#       DD_TRACER_VERSION_GO, that the step and a Bash script that it starts
+#       still have both folders around the toolchain's go, that the script
+#       keeps the step's PATH and go, that each module's test event reaches a
+#       local intake only when instrumented, that a failing test still fails,
+#       and that go test leaves the projects' files unchanged.
 #
 # "default" is the orb's go_tracer_version default. SMOKE_FAIL=1 makes the
 # modules' test fail.
@@ -24,6 +27,37 @@ fail() {
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 state_dir=/tmp/go-check
 project_dir="$state_dir/project"
+path_before_dir="$state_dir/path-before"
+path_after_dir="$state_dir/path-after"
+
+# Prints the position of the first entry of the PATH $1 that is $2, or nothing.
+path_position() {
+  local position=0 entry rest="$1:"
+  while [ -n "$rest" ]; do
+    entry="${rest%%:*}"
+    rest="${rest#*:}"
+    if [ "$entry" = "$2" ]; then
+      echo "$position"
+      return
+    fi
+    position=$((position + 1))
+  done
+}
+
+# The folders that prepare wrote to $BASH_ENV stay on the PATH $2, which $1
+# has, in the order written: in front of the toolchain's go and behind it.
+check_earlier_path() {
+  local where="$1" path="$2" go_dir before toolchain after
+  go_dir="$(dirname "$(cat "$state_dir/toolchain-go.path")")"
+  before="$(path_position "$path" "$path_before_dir")"
+  toolchain="$(path_position "$path" "$go_dir")"
+  after="$(path_position "$path" "$path_after_dir")"
+  [ -n "$before" ] && [ -n "$after" ] || fail "$where lost a folder that an earlier step put on PATH: $path"
+  [ -n "$toolchain" ] || fail "$where has no $go_dir on PATH: $path"
+  [ "$before" -lt "$toolchain" ] && [ "$toolchain" -lt "$after" ] ||
+    fail "$where does not have $path_before_dir, $go_dir and $path_after_dir in that order on PATH: $path"
+  echo "PASS: $where keeps $path_before_dir in front of $go_dir and $path_after_dir behind it on PATH"
+}
 
 prepare() {
   local layout="$1"
@@ -58,6 +92,14 @@ EOF
   printf '%s\n' "${modules[@]}" > "$state_dir/modules"
   cp -R "$project_dir/go-smoke" "$state_dir/go-smoke.before"
   command -v go > "$state_dir/toolchain-go.path"
+
+  # Relative to $PATH, as earlier steps write them: the installer's Bash reads
+  # $BASH_ENV again, so its PATH has each folder twice, and the orb must still
+  # keep both.
+  [ -n "${BASH_ENV:-}" ] || fail "BASH_ENV is not set"
+  mkdir -p "$path_before_dir" "$path_after_dir"
+  echo "export PATH=$path_before_dir:\$PATH" >> "$BASH_ENV"
+  echo "export PATH=\$PATH:$path_after_dir" >> "$BASH_ENV"
 }
 
 check() {
@@ -89,10 +131,12 @@ check() {
     *) fail "Expected instrumented or skipped, got '$expected_go'" ;;
   esac
 
+  check_earlier_path "the step" "$PATH"
+
   # Every Bash script that a step starts reads $BASH_ENV again; it must still
   # find what the step put first on PATH, and the same go as the step.
   [ -n "${BASH_ENV:-}" ] || fail "BASH_ENV is not exported, so Bash scripts that the step starts would not read it"
-  local tool_dir="$state_dir/step-tools" nested_go
+  local tool_dir="$state_dir/step-tools" nested_output nested_go nested_path
   mkdir -p "$tool_dir"
   printf '#!/bin/sh\necho step tool\n' > "$tool_dir/go-check-step-tool"
   chmod +x "$tool_dir/go-check-step-tool"
@@ -100,12 +144,15 @@ check() {
 #!/usr/bin/env bash
 command -v go-check-step-tool >/dev/null || { echo "PATH: $PATH" >&2; exit 1; }
 command -v go
+echo "$PATH"
 EOF
   chmod +x "$state_dir/nested-script.sh"
-  nested_go="$(PATH="$tool_dir:$PATH" "$state_dir/nested-script.sh")" ||
+  nested_output="$(PATH="$tool_dir:$PATH" "$state_dir/nested-script.sh")" ||
     fail "a Bash script started with $tool_dir first on PATH does not find go-check-step-tool there"
+  { IFS= read -r nested_go; IFS= read -r nested_path; } <<< "$nested_output"
   [ "$nested_go" = "$go_path" ] || fail "go is $nested_go in a Bash script that the step starts, not $go_path"
   echo "PASS: a Bash script that the step starts keeps the step's PATH and runs $nested_go"
+  check_earlier_path "a Bash script that the step starts" "$nested_path"
 
   cd "$project_dir"
   local module_dir
