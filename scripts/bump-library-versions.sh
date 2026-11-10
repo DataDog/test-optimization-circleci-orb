@@ -13,9 +13,8 @@ Options:
   --java VERSION      Datadog Java tracer version
   --js VERSION        Datadog JavaScript tracer version
   --python VERSION    Datadog Python tracer version
-  --coverage VERSION  Python coverage version
   --ruby VERSION      datadog-ci Ruby gem version
-  --go VERSION        Orchestrion version, including the leading v
+  --go VERSION        ddtest version, including the leading v
   -h, --help          Show this help
 EOF
 }
@@ -27,7 +26,7 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
-    --dotnet|--java|--js|--python|--coverage|--ruby|--go)
+    --dotnet|--java|--js|--python|--ruby|--go)
       if [[ -z "${2:-}" ]]; then
         usage >&2
         exit 1
@@ -58,7 +57,6 @@ parameter_names = {
   'java' => 'java_tracer_version',
   'js' => 'js_tracer_version',
   'python' => 'python_tracer_version',
-  'coverage' => 'python_coverage_version',
   'ruby' => 'ruby_tracer_version',
   'go' => 'go_tracer_version'
 }.freeze

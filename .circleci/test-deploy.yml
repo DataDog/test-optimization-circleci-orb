@@ -19,7 +19,92 @@ release-filters: &release-filters
   tags:
     only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
 
+commands:
+  # tests/go-check.sh needs Bash and curl, which golang images have, and
+  # Python for its local stand-in for the intake.
+  go-check-prepare:
+    parameters:
+      layout:
+        type: string
+        default: root
+    steps:
+      - checkout
+      - run:
+          name: Install Python for the intake
+          command: |
+            if ! command -v python3 >/dev/null 2>&1; then
+              apt-get update -qq
+              apt-get install -y -qq python3 >/dev/null
+            fi
+      - run: echo 'export DD_API_KEY=dummy' >> "$BASH_ENV"
+      - run:
+          name: Write the Go modules and record the image's go
+          command: tests/go-check.sh prepare << parameters.layout >>
+  go-check:
+    parameters:
+      expect_go:
+        type: string
+      expect_ddtest_version:
+        type: string
+        default: ''
+    steps:
+      - run:
+          name: Run go test in a later step, which gets the orb's BASH_ENV
+          command: tests/go-check.sh check << parameters.expect_go >> << parameters.expect_ddtest_version >>
+
 jobs:
+  # The orb's default go_tracer_version, in a step of its own; go test runs
+  # in a later step, as users run it. See tests/go-check.sh.
+  go-command-test:
+    parameters:
+      image:
+        type: string
+      expect_go:
+        type: string
+        default: instrumented
+    docker:
+      - image: << parameters.image >>
+    steps:
+      - go-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: go
+      - go-check:
+          expect_go: << parameters.expect_go >>
+          expect_ddtest_version: default
+
+  # An explicit go_tracer_version: a ddtest release, or an Orchestrion version,
+  # which names no ddtest release and installs the latest.
+  go-version-test:
+    parameters:
+      go_tracer_version:
+        type: string
+      expect_ddtest_version:
+        type: string
+    docker:
+      - image: golang:1.25
+    steps:
+      - go-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: go
+          go_tracer_version: << parameters.go_tracer_version >>
+      - go-check:
+          expect_go: instrumented
+          expect_ddtest_version: << parameters.expect_ddtest_version >>
+
+  # Two modules below the root, with the deprecated python_coverage_version set.
+  go-deprecated-parameter-test:
+    docker:
+      - image: golang:1.25
+    steps:
+      - go-check-prepare:
+          layout: multiple_modules
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: go
+          python_coverage_version: '7.13.5'
+      - go-check:
+          expect_go: instrumented
+          expect_ddtest_version: default
+
   # Test that the autoinstrumentation command orb works as expected.
   command-test:
     docker:
@@ -47,6 +132,32 @@ workflows:
       # Test your orb's commands in a custom job and test your orb's jobs directly as a part of this workflow.
       - command-test:
           filters: *filters
+      - go-command-test:
+          name: go-command-test-golang-1-25
+          image: golang:1.25
+          filters: *filters
+      - go-command-test:
+          name: go-command-test-golang-1
+          image: golang:1
+          filters: *filters
+      # ddtest needs Go 1.25: the orb skips Go with a warning and the job continues.
+      - go-command-test:
+          name: go-command-test-skip-golang-1-24
+          image: golang:1.24
+          expect_go: skipped
+          filters: *filters
+      - go-version-test:
+          name: go-version-test-v1-16-0
+          go_tracer_version: v1.16.0
+          expect_ddtest_version: v1.16.0
+          filters: *filters
+      - go-version-test:
+          name: go-version-test-orchestrion-v1-8-0
+          go_tracer_version: v1.8.0
+          expect_ddtest_version: latest
+          filters: *filters
+      - go-deprecated-parameter-test:
+          filters: *filters
       # The orb must be re-packed for publishing, and saved to the workspace.
       - orb-tools/pack:
           filters: *release-filters
@@ -58,5 +169,11 @@ workflows:
           requires:
             - orb-tools/pack
             - command-test
+            - go-command-test-golang-1-25
+            - go-command-test-golang-1
+            - go-command-test-skip-golang-1-24
+            - go-version-test-v1-16-0
+            - go-version-test-orchestrion-v1-8-0
+            - go-deprecated-parameter-test
           context: orb-publishing
           filters: *release-filters

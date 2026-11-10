@@ -19,6 +19,10 @@ fi
 
 echo "export DD_CIVISIBILITY_AUTO_INSTRUMENTATION_PROVIDER=circleci" >> "$BASH_ENV"
 
+if [ -n "$PYTHON_COVERAGE_VERSION" ]; then
+	>&2 echo "Warning: python_coverage_version is deprecated and has no effect: the Python tracer no longer needs the coverage package, and the orb no longer installs it."
+fi
+
 script_filepath="install_test_visibility.sh"
 
 if command -v curl >/dev/null 2>&1; then
