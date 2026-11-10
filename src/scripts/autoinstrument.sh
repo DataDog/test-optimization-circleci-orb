@@ -49,9 +49,12 @@ fi
 
 chmod +x ./install_test_visibility.sh
 
+# Bash reads $BASH_ENV in each later step, so each value is quoted for Bash:
+# the PATH that the installer prints for Go holds the job's whole PATH, and a
+# $, " or ` in it would otherwise be expanded or end the quotes.
 while IFS='=' read -r name value; do
   if [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
-    echo "export $name=\"$value\"" >> "$BASH_ENV"
+    printf 'export %s=%q\n' "$name" "$value" >> "$BASH_ENV"
   fi
 done < <(./install_test_visibility.sh)
 

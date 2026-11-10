@@ -91,6 +91,21 @@ jobs:
           expect_go: instrumented
           expect_ddtest_version: << parameters.expect_ddtest_version >>
 
+  # ddtest's go command in a cache folder whose name has a $ and a ", which the
+  # PATH that the orb writes to BASH_ENV must keep as they are.
+  go-special-characters-test:
+    docker:
+      - image: golang:1.25
+    environment:
+      XDG_CACHE_HOME: /tmp/cache-$NOT_A_VARIABLE-"quoted"
+    steps:
+      - go-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: go
+      - go-check:
+          expect_go: instrumented
+          expect_ddtest_version: default
+
   # Two modules below the root, with the deprecated python_coverage_version set.
   go-deprecated-parameter-test:
     docker:
@@ -158,6 +173,8 @@ workflows:
           filters: *filters
       - go-deprecated-parameter-test:
           filters: *filters
+      - go-special-characters-test:
+          filters: *filters
       # The orb must be re-packed for publishing, and saved to the workspace.
       - orb-tools/pack:
           filters: *release-filters
@@ -175,5 +192,6 @@ workflows:
             - go-version-test-v1-16-0
             - go-version-test-orchestrion-v1-8-0
             - go-deprecated-parameter-test
+            - go-special-characters-test
           context: orb-publishing
           filters: *release-filters
