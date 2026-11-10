@@ -7,7 +7,8 @@
 #       /tmp/go-check/project and records the toolchain's go;
 #   tests/go-check.sh check instrumented|skipped [default|latest|<version>]
 #       in a later step, which gets the orb's $BASH_ENV: checks go on PATH,
-#       DD_TRACER_VERSION_GO, that each module's test event reaches a local
+#       DD_TRACER_VERSION_GO, that a Bash script that the step starts keeps
+#       the step's PATH and go, that each module's test event reaches a local
 #       intake only when instrumented, that a failing test still fails, and
 #       that go test leaves the projects' files unchanged.
 #
@@ -87,6 +88,24 @@ check() {
       ;;
     *) fail "Expected instrumented or skipped, got '$expected_go'" ;;
   esac
+
+  # Every Bash script that a step starts reads $BASH_ENV again; it must still
+  # find what the step put first on PATH, and the same go as the step.
+  [ -n "${BASH_ENV:-}" ] || fail "BASH_ENV is not exported, so Bash scripts that the step starts would not read it"
+  local tool_dir="$state_dir/step-tools" nested_go
+  mkdir -p "$tool_dir"
+  printf '#!/bin/sh\necho step tool\n' > "$tool_dir/go-check-step-tool"
+  chmod +x "$tool_dir/go-check-step-tool"
+  cat > "$state_dir/nested-script.sh" <<'EOF'
+#!/usr/bin/env bash
+command -v go-check-step-tool >/dev/null || { echo "PATH: $PATH" >&2; exit 1; }
+command -v go
+EOF
+  chmod +x "$state_dir/nested-script.sh"
+  nested_go="$(PATH="$tool_dir:$PATH" "$state_dir/nested-script.sh")" ||
+    fail "a Bash script started with $tool_dir first on PATH does not find go-check-step-tool there"
+  [ "$nested_go" = "$go_path" ] || fail "go is $nested_go in a Bash script that the step starts, not $go_path"
+  echo "PASS: a Bash script that the step starts keeps the step's PATH and runs $nested_go"
 
   cd "$project_dir"
   local module_dir

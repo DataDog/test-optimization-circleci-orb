@@ -49,11 +49,20 @@ fi
 
 chmod +x ./install_test_visibility.sh
 
-# Bash reads $BASH_ENV in each later step, so each value is quoted for Bash:
-# the PATH that the installer prints for Go holds the job's whole PATH, and a
-# $, " or ` in it would otherwise be expanded or end the quotes.
+# Bash reads $BASH_ENV in each later step, so each value is quoted for Bash: a
+# $, " or ` in it would otherwise be expanded or end the quotes. For Go, the
+# installer prints ddtest's folder followed by this step's PATH. Only that
+# folder is written, in front of the PATH of the shell that reads $BASH_ENV:
+# every Bash script that a later step starts reads it again, and a copy of this
+# step's PATH would drop what the step or its environment put on PATH.
 while IFS='=' read -r name value; do
-  if [[ $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  if [[ ! $name =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    continue
+  fi
+  if [[ $name == PATH && $value == *":$PATH" ]]; then
+    # shellcheck disable=SC2016
+    printf 'export PATH=%q:"$PATH"\n' "${value%":$PATH"}" >> "$BASH_ENV"
+  else
     printf 'export %s=%q\n' "$name" "$value" >> "$BASH_ENV"
   fi
 done < <(./install_test_visibility.sh)
