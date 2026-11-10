@@ -52,10 +52,11 @@ check_earlier_path() {
   before="$(path_position "$path" "$path_before_dir")"
   toolchain="$(path_position "$path" "$go_dir")"
   after="$(path_position "$path" "$path_after_dir")"
-  [ -n "$before" ] && [ -n "$after" ] || fail "$where lost a folder that an earlier step put on PATH: $path"
+  [ -n "$before" ] || fail "$where lost $path_before_dir, which an earlier step put on PATH: $path"
+  [ -n "$after" ] || fail "$where lost $path_after_dir, which an earlier step put on PATH: $path"
   [ -n "$toolchain" ] || fail "$where has no $go_dir on PATH: $path"
-  [ "$before" -lt "$toolchain" ] && [ "$toolchain" -lt "$after" ] ||
-    fail "$where does not have $path_before_dir, $go_dir and $path_after_dir in that order on PATH: $path"
+  [ "$before" -lt "$toolchain" ] || fail "$where has $path_before_dir behind $go_dir on PATH: $path"
+  [ "$toolchain" -lt "$after" ] || fail "$where has $path_after_dir in front of $go_dir on PATH: $path"
   echo "PASS: $where keeps $path_before_dir in front of $go_dir and $path_after_dir behind it on PATH"
 }
 
