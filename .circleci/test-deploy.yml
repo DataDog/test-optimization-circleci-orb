@@ -20,8 +20,9 @@ release-filters: &release-filters
     only: /^v[0-9]+\.[0-9]+\.[0-9]+$/
 
 commands:
-  # tests/go-check.sh needs Bash and curl, which golang images have, and
-  # Python for its local stand-in for the intake.
+  # tests/go-check.sh needs Bash and curl, which the Go images have, and
+  # Python for its local stand-in for the intake: cimg/go has it, and golang
+  # images, which run as root, get it from apt-get.
   go-check-prepare:
     parameters:
       layout:
@@ -155,6 +156,11 @@ workflows:
           name: go-command-test-golang-1
           image: golang:1
           filters: *filters
+      # The README's image, whose user, circleci, is not root.
+      - go-command-test:
+          name: go-command-test-cimg-go-1-25
+          image: cimg/go:1.25
+          filters: *filters
       # ddtest needs Go 1.25: the orb skips Go with a warning and the job continues.
       - go-command-test:
           name: go-command-test-skip-golang-1-24
@@ -188,6 +194,7 @@ workflows:
             - command-test
             - go-command-test-golang-1-25
             - go-command-test-golang-1
+            - go-command-test-cimg-go-1-25
             - go-command-test-skip-golang-1-24
             - go-version-test-v1-16-0
             - go-version-test-orchestrion-v1-8-0
