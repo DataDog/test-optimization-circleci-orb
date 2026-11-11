@@ -57,7 +57,7 @@ The `@1` reference does not move to v2 automatically. Update the orb declaration
 
 No parameter names or required configuration change. Omitted library-version parameters use the pinned v2 snapshot listed in the [configuration table](#configuration), so the first v2 run may use different libraries from the last v1 run. Those defaults no longer change independently on every run.
 
-Explicit library-version parameters remain authoritative. With `@2`, reviewed v2 releases can update the orb and any omitted library defaults; with `@2.0.0`, the orb and its default snapshot remain fixed until the reference is updated explicitly.
+Explicit library-version parameters remain authoritative. The exception is `go_tracer_version`, which now selects a ddtest release instead of an Orchestrion version; see [Tracing Go tests](#tracing-go-tests). With `@2`, reviewed v2 releases can update the orb and any omitted library defaults; with `@2.0.0`, the orb and its default snapshot remain fixed until the reference is updated explicitly.
 
 Before migrating, review the v2 defaults and run a representative workflow. Set an explicit version parameter first if a workflow must keep using a validated library version.
 
@@ -67,7 +67,7 @@ The orb has the following parameters:
 
 | Name                           | Description                                                                                                                                                                                                                                                                                         | Required | Default       |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
-| languages                      | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby" (multiple languages can be specified as a space-separated list).                                                                                                                       | true     |               |
+| languages                      | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go" (multiple languages can be specified as a space-separated list).                                                                                                                 | true     |               |
 | site                           | Datadog site. See https://docs.datadoghq.com/getting_started/site for more information about sites.                                                                                                                                                                                                 | false    | datadoghq.com |
 | service                        | The name of the service or library being tested.                                                                                                                                                                                                                                                    | false    |               |
 | dotnet_tracer_version          | The version of Datadog .NET tracer to use.                                                                                                                                                                                                                                                         | false    | 3.55.1        |
@@ -75,9 +75,10 @@ The orb has the following parameters:
 | js_tracer_version              | The version of Datadog JS tracer to use.                                                                                                                                                                                                                                                           | false    | 6.21.0        |
 | python_tracer_version          | The version of Datadog Python tracer to use.                                                                                                                                                                                                                                                       | false    | 4.15.6        |
 | ruby_tracer_version            | The version of datadog-ci gem to use.                                                                                                                                                                                                                                                              | false    | 1.42.0        |
-| go_tracer_version              | The version of Orchestrion automatic compile-time instrumentation of Go code (https://github.com/datadog/orchestrion) to use.                                                                                                                                                                      | false    | v1.14.0       |
-| python_coverage_version        | The version of the Python `coverage` package to use.                                                                                                                                                                                                                                               | false    | 7.16.2        |
+| go_tracer_version              | The version of [ddtest](https://github.com/DataDog/ddtest) to use for Go, `v1.14.0` or newer. See [Tracing Go tests](#tracing-go-tests).                                                                                                                                                           | false    | v1.16.0       |
 | java_instrumented_build_system | If provided, only the specified build systems will be instrumented (allowed values are `gradle`,`maven`,`sbt`,`ant`,`all`). `all` is a special value that instruments every Java process. If this property is not provided, all known build systems will be instrumented (Gradle, Maven, SBT, Ant). | false    |               |
+
+The deprecated parameter `python_coverage_version` is still accepted, with a warning, and has no effect: the Python tracer no longer needs the `coverage` package, which the orb no longer installs.
 
 ### Pin an individual library version
 
@@ -97,7 +98,7 @@ jobs:
           java_tracer_version: 1.64.0
 ```
 
-This allows orb updates while holding a library at a version you have validated. The explicit parameter overrides the orb release default, remains fixed when `@2` advances, and must be updated manually to receive future fixes for that library. The same behavior applies to every library-version parameter in the table above.
+This allows orb updates while holding a library at a version you have validated. The explicit parameter overrides the orb release default, remains fixed when `@2` advances, and must be updated manually to receive future fixes for that library. The same behavior applies to every library-version parameter in the table above, except `go_tracer_version` for a value set before the orb moved from Orchestrion to ddtest; see [Tracing Go tests](#tracing-go-tests).
 
 Maintainers can use the local scripts described in [RELEASE.md](RELEASE.md) to create a batched library bump PR and publish the resulting orb release.
 
@@ -150,3 +151,26 @@ jobs:
 ### Tracing cypress tests
 
 To instrument your [Cypress](https://www.cypress.io/) tests with Datadog Test Optimization, please follow the manual steps in the [docs](https://docs.datadoghq.com/tests/setup/javascript/?tab=cypress).
+
+### Tracing Go tests
+
+Go tests report through [`ddtest instrument`](https://github.com/DataDog/ddtest/blob/main/ddto/README.md). The orb adds ddtest's `go` command to the front of `PATH` through `$BASH_ENV`, so the job's next steps use it. That `go` runs `go test` through ddtest, also when `make`, a script or [gotestsum](https://github.com/gotestyourself/gotestsum) starts it, and runs every other `go` command unchanged. The orb does not modify your `go.mod`, and a repository with several Go modules needs no configuration.
+
+```yaml
+jobs:
+  test:
+    docker:
+      - image: cimg/go:1.25
+    steps:
+      - checkout
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: go
+          site: datadoghq.com
+      - run: go test ./...
+```
+
+- The job's image needs Go 1.25 or newer. With an older Go, the orb prints a warning and skips Go instrumentation, and the job continues. Your `go.mod` can still declare an older Go version.
+- The job downloads ddtest from `github.com`.
+- Run the tests in a later step of the same job. ddtest's `go` command lives in the job user's cache directory and is a link to the executable in the `.datadog` folder that the orb creates in the working directory. If a later step deletes that folder or puts another `go` first on `PATH`, `go test` runs without Test Optimization.
+- With Test Impact Analysis, build the tests with coverage in count or atomic mode, such as `go test -cover -covermode=atomic ./...`, so each test reports the code it ran.
+- `go_tracer_version` selects a ddtest release. Up to 2.2.0, the orb instrumented Go with Orchestrion and this parameter selected an Orchestrion version, so a value set then no longer installs that version. A value that names no ddtest release from `v1.14.0` on, such as `v1.8.0`, installs the latest ddtest with a warning, and a version from `v1.14.0` on installs the ddtest release with the same number. To keep Orchestrion, pin the orb to 2.2.0 or earlier.

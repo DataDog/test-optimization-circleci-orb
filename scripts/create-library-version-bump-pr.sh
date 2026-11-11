@@ -65,7 +65,6 @@ current_dotnet=$(read_default dotnet_tracer_version)
 current_java=$(read_default java_tracer_version)
 current_js=$(read_default js_tracer_version)
 current_python=$(read_default python_tracer_version)
-current_coverage=$(read_default python_coverage_version)
 current_ruby=$(read_default ruby_tracer_version)
 current_go=$(read_default go_tracer_version)
 
@@ -85,15 +84,11 @@ latest_python=$(
   curl -fsSL https://pypi.org/pypi/ddtrace/json |
     ruby -rjson -e 'data = JSON.parse(STDIN.read); versions = data.fetch("releases").keys.grep(/^\d+\.\d+\.\d+$/).select { |version| data.fetch("releases").fetch(version).any? { |file| !file.fetch("yanked", false) } }; puts versions.max_by { |version| version.split(".").map(&:to_i) }'
 )
-latest_coverage=$(
-  curl -fsSL https://pypi.org/pypi/coverage/json |
-    ruby -rjson -e 'data = JSON.parse(STDIN.read); versions = data.fetch("releases").keys.grep(/^\d+\.\d+\.\d+$/).select { |version| data.fetch("releases").fetch(version).any? { |file| !file.fetch("yanked", false) } }; puts versions.max_by { |version| version.split(".").map(&:to_i) }'
-)
 latest_ruby=$(
   curl -fsSL https://rubygems.org/api/v1/versions/datadog-ci.json |
     ruby -rjson -e 'versions = JSON.parse(STDIN.read).reject { |item| item.fetch("prerelease", false) || item.fetch("yanked", false) }.map { |item| item.fetch("number") }.grep(/^\d+\.\d+\.\d+$/); puts versions.max_by { |version| version.split(".").map(&:to_i) }'
 )
-latest_go=$(gh api repos/DataDog/orchestrion/releases/latest --jq '.tag_name')
+latest_go=$(gh api repos/DataDog/ddtest/releases/latest --jq '.tag_name')
 
 is_exact_version() {
   local name="$1"
@@ -165,9 +160,8 @@ record_change dotnet ".NET" "$current_dotnet" "$latest_dotnet"
 record_change java "Java" "$current_java" "$latest_java"
 record_change js "JavaScript" "$current_js" "$latest_js"
 record_change python "Python" "$current_python" "$latest_python"
-record_change coverage "Python coverage" "$current_coverage" "$latest_coverage"
 record_change ruby "Ruby" "$current_ruby" "$latest_ruby"
-record_change go "Go/Orchestrion" "$current_go" "$latest_go"
+record_change go "Go/ddtest" "$current_go" "$latest_go"
 
 if [[ ${#changes[@]} -eq 0 ]]; then
   echo "All pinned library versions are current."
