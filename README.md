@@ -148,10 +148,6 @@ jobs:
 
 **Important**: `vitest` and `dd-trace` require Node.js>=18.19 or Node.js>=20.6 to work together.
 
-### Tracing Cypress tests
-
-Cypress uses the standard JavaScript auto-instrumentation setup shown above. No changes to the Cypress configuration or support file are required.
-
 ### Tracing Go tests
 
 Go tests report through [`ddtest instrument`](https://github.com/DataDog/ddtest/blob/main/ddto/README.md). The orb adds ddtest's `go` command to the front of `PATH` through `$BASH_ENV`, so the job's next steps use it. That `go` runs `go test` through ddtest, also when `make`, a script or [gotestsum](https://github.com/gotestyourself/gotestsum) starts it, and runs every other `go` command unchanged. The orb does not modify your `go.mod`, and a repository with several Go modules needs no configuration.
