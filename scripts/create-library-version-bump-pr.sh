@@ -67,7 +67,6 @@ current_js=$(read_default js_tracer_version)
 current_python=$(read_default python_tracer_version)
 current_ruby=$(read_default ruby_tracer_version)
 current_go=$(read_default go_tracer_version)
-current_rust=$(read_default rust_tracer_version)
 
 latest_dotnet=$(
   curl -fsSL https://api.nuget.org/v3-flatcontainer/dd-trace/index.json |
@@ -90,13 +89,12 @@ latest_ruby=$(
     ruby -rjson -e 'versions = JSON.parse(STDIN.read).reject { |item| item.fetch("prerelease", false) || item.fetch("yanked", false) }.map { |item| item.fetch("number") }.grep(/^\d+\.\d+\.\d+$/); puts versions.max_by { |version| version.split(".").map(&:to_i) }'
 )
 latest_go=$(gh api repos/DataDog/ddtest/releases/latest --jq '.tag_name')
-latest_rust=$(gh api repos/DataDog/dd-test-rs/releases/latest --jq '.tag_name')
 
 is_exact_version() {
   local name="$1"
   local version="$2"
 
-  if [[ "$name" == "go" || "$name" == "rust" ]]; then
+  if [[ "$name" == "go" ]]; then
     [[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
   else
     [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
@@ -164,7 +162,6 @@ record_change js "JavaScript" "$current_js" "$latest_js"
 record_change python "Python" "$current_python" "$latest_python"
 record_change ruby "Ruby" "$current_ruby" "$latest_ruby"
 record_change go "Go/ddtest" "$current_go" "$latest_go"
-record_change rust "Rust/dd-test-rs" "$current_rust" "$latest_rust"
 
 if [[ ${#changes[@]} -eq 0 ]]; then
   echo "All pinned library versions are current."

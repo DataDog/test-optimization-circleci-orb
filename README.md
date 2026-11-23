@@ -35,7 +35,7 @@ jobs:
 
 ### Choose an orb version
 
-Starting with v2, each orb release pins its default library versions instead of resolving the latest versions during customer runs. [CircleCI registry orbs use semantic version references](https://circleci.com/docs/orbs/use/orb-concepts/#semantic-versioning-registry-orbs), so the value after `@` determines whether a workflow receives newer orb releases and their reviewed library snapshots:
+Starting with v2, each orb release pins its default library versions instead of resolving the latest versions during customer runs. The exception is `rust_tracer_version`, which defaults to the latest dd-test-rs release because dd-test-rs is in Preview. [CircleCI registry orbs use semantic version references](https://circleci.com/docs/orbs/use/orb-concepts/#semantic-versioning-registry-orbs), so the value after `@` determines whether a workflow receives newer orb releases and their reviewed library snapshots:
 
 | Reference | Example | Behavior | Trade-off |
 | --------- | ------- | -------- | --------- |
@@ -76,7 +76,7 @@ The orb has the following parameters:
 | python_tracer_version          | The version of Datadog Python tracer to use.                                                                                                                                                                                                                                                       | false    | 4.16.4        |
 | ruby_tracer_version            | The version of datadog-ci gem to use.                                                                                                                                                                                                                                                              | false    | 1.43.0        |
 | go_tracer_version              | The version of [ddtest](https://github.com/DataDog/ddtest) to use for Go, `v1.14.0` or newer. See [Tracing Go tests](#tracing-go-tests).                                                                                                                                                           | false    | v1.16.0       |
-| rust_tracer_version            | The version of [dd-test-rs](https://github.com/DataDog/dd-test-rs) to use for Rust. See [Tracing Rust tests](#tracing-rust-tests).                                                                                                                                                                  | false    | v0.2.0        |
+| rust_tracer_version            | The version of [dd-test-rs](https://github.com/DataDog/dd-test-rs) to use for Rust. See [Tracing Rust tests](#tracing-rust-tests).                                                                                                                                                                  | false    | latest        |
 | java_instrumented_build_system | If provided, only the specified build systems will be instrumented (allowed values are `gradle`,`maven`,`sbt`,`ant`,`all`). `all` is a special value that instruments every Java process. If this property is not provided, all known build systems will be instrumented (Gradle, Maven, SBT, Ant). | false    |               |
 
 The deprecated parameter `python_coverage_version` is still accepted, with a warning, and has no effect: the Python tracer no longer needs the `coverage` package, which the orb no longer installs.
@@ -195,4 +195,4 @@ jobs:
 - The first build with the wrapper recompiles the workspace crates, because Cargo includes the wrapper in its build fingerprint. Dependencies stay cached.
 - Doctests, tests with a custom harness (`harness = false` or `#![test_runner]`) and test builds with `panic = "abort"` run normally but are not reported.
 - Test Impact Analysis and code coverage are not supported.
-- `rust_tracer_version` selects a dd-test-rs release. A value that names no release, such as `v9.9.9`, installs the latest release with a warning.
+- `rust_tracer_version` selects a dd-test-rs release and defaults to the latest one. A value that names no release, such as `v9.9.9`, installs the latest release with a warning.

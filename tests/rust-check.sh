@@ -9,8 +9,8 @@
 #       RUSTC_WORKSPACE_WRAPPER and DD_TRACER_VERSION_RUST, that cargo test
 #       reports to a local intake, and that a failing test still fails.
 #
-# "default" is the orb's rust_tracer_version default. SMOKE_FAIL=1 makes the
-# project's test fail.
+# "default" is the orb's rust_tracer_version default, the latest dd-test-rs
+# release. SMOKE_FAIL=1 makes the project's test fail.
 set -euo pipefail
 
 fail() {
@@ -66,7 +66,10 @@ check() {
   fi
 
   if [ "$expected_version" = "default" ]; then
-    expected_version="$(awk '/^  rust_tracer_version:/ { input = 1 } input && /^    default:/ { gsub(/[ \047\r]/, "", $2); print $2; exit }' "$repo_dir/src/commands/autoinstrument.yml")"
+    # The default is the latest release, so its tag changes.
+    expected_version="${DD_TRACER_VERSION_RUST:-}"
+    [[ "$expected_version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+      fail "dd-test-rs ${expected_version:-?} was installed, not a dd-test-rs release"
   elif [ "$expected_version" = "latest" ]; then
     # GitHub redirects releases/latest to the newest release's tag.
     expected_version="$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/DataDog/dd-test-rs/releases/latest)"
