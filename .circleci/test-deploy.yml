@@ -52,6 +52,32 @@ commands:
       - run:
           name: Run go test in a later step, which gets the orb's BASH_ENV
           command: tests/go-check.sh check << parameters.expect_go >> << parameters.expect_ddtest_version >>
+  # tests/rust-check.sh needs Bash and curl, which the Rust images have, and
+  # Python for its local stand-in for the intake, which apt-get installs when
+  # the image lacks it.
+  rust-check-prepare:
+    steps:
+      - checkout
+      - run:
+          name: Install Python for the intake
+          command: |
+            if ! command -v python3 >/dev/null 2>&1; then
+              apt-get update -qq
+              apt-get install -y -qq python3 >/dev/null
+            fi
+      - run: echo 'export DD_API_KEY=dummy' >> "$BASH_ENV"
+      - run:
+          name: Write the Cargo project
+          command: tests/rust-check.sh prepare
+  rust-check:
+    parameters:
+      expect_version:
+        type: string
+        default: default
+    steps:
+      - run:
+          name: Run cargo test in a later step, which gets the orb's BASH_ENV
+          command: tests/rust-check.sh check << parameters.expect_version >>
 
 jobs:
   # The orb's default go_tracer_version, in a step of its own; go test runs
@@ -121,6 +147,51 @@ jobs:
           expect_go: instrumented
           expect_ddtest_version: default
 
+  # The orb's default rust_tracer_version, in a step of its own; cargo test runs
+  # in a later step, as users run it. See tests/rust-check.sh.
+  rust-command-test:
+    parameters:
+      image:
+        type: string
+    docker:
+      - image: << parameters.image >>
+    steps:
+      - rust-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: rust
+      - rust-check
+
+  # An explicit rust_tracer_version: a dd-test-rs release, or a version that
+  # names none, which installs the latest.
+  rust-version-test:
+    parameters:
+      rust_tracer_version:
+        type: string
+      expect_version:
+        type: string
+    docker:
+      - image: rust:1.81
+    steps:
+      - rust-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: rust
+          rust_tracer_version: << parameters.rust_tracer_version >>
+      - rust-check:
+          expect_version: << parameters.expect_version >>
+
+  # The wrapper in a tracer folder whose name has a $ and a ", which the value
+  # that the orb writes to BASH_ENV must keep as they are.
+  rust-special-characters-test:
+    docker:
+      - image: rust:1.81
+    environment:
+      DD_TRACER_FOLDER: /tmp/datadog-$NOT_A_VARIABLE-"quoted"
+    steps:
+      - rust-check-prepare
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: rust
+      - rust-check
+
   # Test that the autoinstrumentation command orb works as expected.
   command-test:
     docker:
@@ -181,6 +252,27 @@ workflows:
           filters: *filters
       - go-special-characters-test:
           filters: *filters
+      # The oldest Rust that dd-test-rs supports.
+      - rust-command-test:
+          name: rust-command-test-rust-1-81
+          image: rust:1.81
+          filters: *filters
+      - rust-command-test:
+          name: rust-command-test-rust-1
+          image: rust:1
+          filters: *filters
+      - rust-version-test:
+          name: rust-version-test-v0-1-0
+          rust_tracer_version: v0.1.0
+          expect_version: v0.1.0
+          filters: *filters
+      - rust-version-test:
+          name: rust-version-test-unknown-v9-9-9
+          rust_tracer_version: v9.9.9
+          expect_version: latest
+          filters: *filters
+      - rust-special-characters-test:
+          filters: *filters
       # The orb must be re-packed for publishing, and saved to the workspace.
       - orb-tools/pack:
           filters: *release-filters
@@ -200,5 +292,10 @@ workflows:
             - go-version-test-orchestrion-v1-8-0
             - go-deprecated-parameter-test
             - go-special-characters-test
+            - rust-command-test-rust-1-81
+            - rust-command-test-rust-1
+            - rust-version-test-v0-1-0
+            - rust-version-test-unknown-v9-9-9
+            - rust-special-characters-test
           context: orb-publishing
           filters: *release-filters

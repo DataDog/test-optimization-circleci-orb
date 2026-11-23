@@ -104,4 +104,7 @@ fi
 if [ -n "$DD_TRACER_VERSION_RUBY" ]; then
   echo "- __Ruby:__ $DD_TRACER_VERSION_RUBY"
 fi
+if [ -n "$DD_TRACER_VERSION_RUST" ]; then
+  echo "- __Rust:__ $DD_TRACER_VERSION_RUST"
+fi
 echo "---"

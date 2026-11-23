@@ -15,6 +15,7 @@ Options:
   --python VERSION    Datadog Python tracer version
   --ruby VERSION      datadog-ci Ruby gem version
   --go VERSION        ddtest version, including the leading v
+  --rust VERSION      dd-test-rs version, including the leading v
   -h, --help          Show this help
 EOF
 }
@@ -26,7 +27,7 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
-    --dotnet|--java|--js|--python|--ruby|--go)
+    --dotnet|--java|--js|--python|--ruby|--go|--rust)
       if [[ -z "${2:-}" ]]; then
         usage >&2
         exit 1
@@ -58,7 +59,8 @@ parameter_names = {
   'js' => 'js_tracer_version',
   'python' => 'python_tracer_version',
   'ruby' => 'ruby_tracer_version',
-  'go' => 'go_tracer_version'
+  'go' => 'go_tracer_version',
+  'rust' => 'rust_tracer_version'
 }.freeze
 
 parsed_updates = ARGV.map do |argument|
@@ -66,7 +68,7 @@ parsed_updates = ARGV.map do |argument|
   abort "Unknown library '#{name}'" unless parameter_names.key?(name)
   abort "Missing version for '#{name}'" if version.nil? || version.empty?
 
-  expected_pattern = name == 'go' ? /^v\d+\.\d+\.\d+$/ : /^\d+\.\d+\.\d+$/
+  expected_pattern = %w[go rust].include?(name) ? /^v\d+\.\d+\.\d+$/ : /^\d+\.\d+\.\d+$/
   abort "Expected an exact #{name} version, got '#{version}'" unless version.match?(expected_pattern)
 
   [name, version]

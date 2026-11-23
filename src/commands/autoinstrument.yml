@@ -2,7 +2,9 @@ description: >
   Installs Datadog tracers for configured languages and enables Test Visibility.
 parameters:
   languages:
-    description: 'List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go" (multiple languages can be specified as a space-separated list).'
+    description: >-
+      List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go", "rust"
+      (multiple languages can be specified as a space-separated list).
     type: string
   service:
     description: 'The name of the service or library being tested.'
@@ -39,6 +41,13 @@ parameters:
       Defaults to the version pinned by this orb release.
     type: string
     default: 'v1.16.0'
+  rust_tracer_version:
+    description: >-
+      The version of dd-test-rs (https://github.com/DataDog/dd-test-rs), which instruments Rust tests, to use (optional).
+      A value that names no dd-test-rs release installs the latest release with a warning.
+      Defaults to the version pinned by this orb release.
+    type: string
+    default: 'v0.2.0'
   python_coverage_version:
     description: 'Deprecated, has no effect: the Python tracer no longer needs the coverage package, and the orb no longer installs it.'
     type: string
@@ -59,9 +68,10 @@ steps:
         DD_SET_TRACER_VERSION_PYTHON: <<parameters.python_tracer_version>>
         DD_SET_TRACER_VERSION_RUBY: <<parameters.ruby_tracer_version>>
         DD_SET_TRACER_VERSION_GO: <<parameters.go_tracer_version>>
+        DD_SET_TRACER_VERSION_RUST: <<parameters.rust_tracer_version>>
         PYTHON_COVERAGE_VERSION: <<parameters.python_coverage_version>>
         DD_INSTRUMENTATION_BUILD_SYSTEM_JAVA: <<parameters.java_instrumented_build_system>>
-        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v16.sh
-        INSTALLATION_SCRIPT_CHECKSUM: c17d89e4e0d2bbfb717217e05f7e64fb0f9c463a1836e46151080b1a6c621ea9
+        INSTALLATION_SCRIPT_URL: https://install.datadoghq.com/scripts/install_test_visibility_v17.sh
+        INSTALLATION_SCRIPT_CHECKSUM: 669f7969cd53bea87a49c611455272fcd809fc9a08d053a1b76e9c5958c1b3e5
       name: Configure Datadog Test Visibility
       command: <<include(scripts/autoinstrument.sh)>>

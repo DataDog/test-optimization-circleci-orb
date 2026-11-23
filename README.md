@@ -1,7 +1,7 @@
 # <img height="25" src="logos/test_visibility_logo.png" /> Datadog Test Optimization CircleCI Orb
 
 [CircleCI orb](https://circleci.com/orbs/registry/orb/datadog/test-optimization-circleci-orb) that installs and configures [Datadog Test Optimization](https://docs.datadoghq.com/tests/).
-Supported languages are .NET, Java, Javascript, Python, Ruby and Go.
+Supported languages are .NET, Java, Javascript, Python, Ruby, Go and Rust.
 
 ## About Datadog Test Optimization
 
@@ -67,7 +67,7 @@ The orb has the following parameters:
 
 | Name                           | Description                                                                                                                                                                                                                                                                                         | Required | Default       |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------- |
-| languages                      | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go" (multiple languages can be specified as a space-separated list).                                                                                                                 | true     |               |
+| languages                      | List of languages to be instrumented. Can be either "all" or any of "java", "js", "python", "dotnet", "ruby", "go", "rust" (multiple languages can be specified as a space-separated list).                                                                                                         | true     |               |
 | site                           | Datadog site. See https://docs.datadoghq.com/getting_started/site for more information about sites.                                                                                                                                                                                                 | false    | datadoghq.com |
 | service                        | The name of the service or library being tested.                                                                                                                                                                                                                                                    | false    |               |
 | dotnet_tracer_version          | The version of Datadog .NET tracer to use.                                                                                                                                                                                                                                                         | false    | 3.57.0        |
@@ -76,6 +76,7 @@ The orb has the following parameters:
 | python_tracer_version          | The version of Datadog Python tracer to use.                                                                                                                                                                                                                                                       | false    | 4.16.4        |
 | ruby_tracer_version            | The version of datadog-ci gem to use.                                                                                                                                                                                                                                                              | false    | 1.43.0        |
 | go_tracer_version              | The version of [ddtest](https://github.com/DataDog/ddtest) to use for Go, `v1.14.0` or newer. See [Tracing Go tests](#tracing-go-tests).                                                                                                                                                           | false    | v1.16.0       |
+| rust_tracer_version            | The version of [dd-test-rs](https://github.com/DataDog/dd-test-rs) to use for Rust. See [Tracing Rust tests](#tracing-rust-tests).                                                                                                                                                                  | false    | v0.2.0        |
 | java_instrumented_build_system | If provided, only the specified build systems will be instrumented (allowed values are `gradle`,`maven`,`sbt`,`ant`,`all`). `all` is a special value that instruments every Java process. If this property is not provided, all known build systems will be instrumented (Gradle, Maven, SBT, Ant). | false    |               |
 
 The deprecated parameter `python_coverage_version` is still accepted, with a warning, and has no effect: the Python tracer no longer needs the `coverage` package, which the orb no longer installs.
@@ -170,3 +171,28 @@ jobs:
 - Run the tests in a later step of the same job. ddtest's `go` command lives in the job user's cache directory and is a link to the executable in the `.datadog` folder that the orb creates in the working directory. If a later step deletes that folder or puts another `go` first on `PATH`, `go test` runs without Test Optimization.
 - With Test Impact Analysis, build the tests with coverage in count or atomic mode, such as `go test -cover -covermode=atomic ./...`, so each test reports the code it ran.
 - `go_tracer_version` selects a ddtest release. Up to 2.2.0, the orb instrumented Go with Orchestrion and this parameter selected an Orchestrion version, so a value set then no longer installs that version. A value that names no ddtest release from `v1.14.0` on, such as `v1.8.0`, installs the latest ddtest with a warning, and a version from `v1.14.0` on installs the ddtest release with the same number. To keep Orchestrion, pin the orb to 2.2.0 or earlier.
+
+### Tracing Rust tests
+
+Rust tests report through [dd-test-rs](https://github.com/DataDog/dd-test-rs). The orb writes the `RUSTC_WORKSPACE_WRAPPER` that the installer prints to `$BASH_ENV`, so `cargo test` in the job's later steps reports to Test Optimization without changes to the project. The orb replaces a `RUSTC_WORKSPACE_WRAPPER` that the job already set, with a warning. Tools set through `RUSTC_WRAPPER`, such as sccache, keep working.
+
+```yaml
+jobs:
+  test:
+    docker:
+      - image: rust:1.81
+    steps:
+      - checkout
+      - test-optimization-circleci-orb/autoinstrument:
+          languages: rust
+          site: datadoghq.com
+      - run: cargo test
+```
+
+- The job's image needs Cargo and Rust 1.81 or newer. When they are missing, the installer reports an error and leaves Rust uninstrumented with `languages: rust`, and skips Rust with a warning with `languages: all`, where the job continues.
+- The job downloads dd-test-rs from `github.com`. Linux and macOS on `amd64` and `arm64` are supported; dd-test-rs has no Windows release.
+- Run the tests in a later step of the same job. Test binaries start the wrapper from the absolute path that built them, so the tests must run on the same machine or container as the orb's step.
+- The first build with the wrapper recompiles the workspace crates, because Cargo includes the wrapper in its build fingerprint. Dependencies stay cached.
+- Doctests, tests with a custom harness (`harness = false` or `#![test_runner]`) and test builds with `panic = "abort"` run normally but are not reported.
+- Test Impact Analysis and code coverage are not supported.
+- `rust_tracer_version` selects a dd-test-rs release. A value that names no release, such as `v9.9.9`, installs the latest release with a warning.
