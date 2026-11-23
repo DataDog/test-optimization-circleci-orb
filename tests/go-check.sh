@@ -160,7 +160,7 @@ EOF
   while IFS= read -r module_dir; do
     # go test passes, and its test's event reaches the intake only when
     # ddtest instruments it.
-    "$repo_dir/tests/go-reporting.sh" "$module_dir" TestSmoke "$reporting"
+    "$repo_dir/tests/reporting.sh" "$module_dir" TestSmoke "$reporting" go test -count=1 -v ./...
     if (cd "$module_dir" && SMOKE_FAIL=1 go test -count=1 ./...) > "$state_dir/failing.log" 2>&1; then
       cat "$state_dir/failing.log"
       fail "a failing test must fail go test in $module_dir"
